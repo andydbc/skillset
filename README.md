@@ -1,6 +1,6 @@
 # skillset
 
-Manage skillsets for Claude Code — group skills from [skills.sh](https://skills.sh) or GitHub into named collections and install them with a single command.
+Manage skillsets for Agents. Group skills from [skills.sh](https://skills.sh) or GitHub into named collections and install them with a single command.
 
 ## Usage
 
