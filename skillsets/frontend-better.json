@@ -1,0 +1,21 @@
+{
+  "name": "frontend-better",
+  "description": "frontend but done better",
+  "skills": [
+    {
+      "skill": "frontend-design",
+      "repo": "anthropics/skills",
+      "source": "https://skills.sh/anthropics/skills/frontend-design"
+    },
+    {
+      "skill": "oklch-skill",
+      "repo": "jakubkrehel/oklch-skill",
+      "source": "https://skills.sh/jakubkrehel/oklch-skill/oklch-skill"
+    },
+    {
+      "skill": "make-interfaces-feel-better",
+      "repo": "jakubkrehel/make-interfaces-feel-better",
+      "source": "https://github.com/jakubkrehel/make-interfaces-feel-better"
+    }
+  ]
+}

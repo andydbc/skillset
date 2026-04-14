@@ -1,0 +1,11 @@
+{
+  "name": "vercel",
+  "description": "Vercel must have",
+  "skills": [
+    {
+      "skill": "vercel-react-best-practices",
+      "repo": "vercel-labs/agent-skills",
+      "source": "https://skills.sh/vercel-labs/agent-skills/vercel-react-best-practices"
+    }
+  ]
+}
