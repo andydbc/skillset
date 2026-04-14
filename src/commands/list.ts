@@ -4,10 +4,15 @@ import { fetchJSON } from '../github.js'
 import { findSkillsetsDir, listLocalSkillsets, readSkillset } from '../utils.js'
 import type { Skillset, GitHubFile } from '../types.js'
 
-export async function list([repoSlug]: string[]): Promise<void> {
+export async function list([repoSlug]: string[], { yes }: { yes: boolean } = { yes: false }): Promise<void> {
   if (!repoSlug) {
     const skillsetsDir = findSkillsetsDir()
     if (skillsetsDir) return printLocal(skillsetsDir)
+
+    if (yes) {
+      console.error(kleur.red('No local skillsets/ found. Provide a repo: npx @andbc/skillset list user/my-skillsets'))
+      process.exit(1)
+    }
 
     const { input } = await prompts({
       type: 'text',

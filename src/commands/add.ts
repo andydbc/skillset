@@ -3,7 +3,7 @@ import kleur from 'kleur'
 import { parseSkillsShUrl, parseGitHubUrl, listSkillsInRepo } from '../github.js'
 import { findSkillsetsDir, readSkillset, writeSkillset, listLocalSkillsets } from '../utils.js'
 
-export async function add([url]: string[]): Promise<void> {
+export async function add([url]: string[], { yes }: { yes: boolean } = { yes: false }): Promise<void> {
   const skillsetsDir = findSkillsetsDir()
   if (!skillsetsDir) {
     console.error(kleur.red('No skillsets/ directory found. Run `npx skillset create` first.'))
@@ -20,6 +20,9 @@ export async function add([url]: string[]): Promise<void> {
   let targetSkillset: string
   if (skillsets.length === 1) {
     targetSkillset = skillsets[0]
+  } else if (yes) {
+    console.error(kleur.red('Multiple skillsets found — specify which one: npx @andbc/skillset add <url> <skillset>'))
+    process.exit(1)
   } else {
     const { picked } = await prompts({
       type: 'select',
@@ -31,6 +34,10 @@ export async function add([url]: string[]): Promise<void> {
   }
 
   if (!url) {
+    if (yes) {
+      console.error(kleur.red('URL required: npx @andbc/skillset add <url>'))
+      process.exit(1)
+    }
     const { input } = await prompts({
       type: 'text',
       name: 'input',
@@ -67,6 +74,8 @@ export async function add([url]: string[]): Promise<void> {
 
     if (available.length === 1) {
       skillsToAdd.push(available[0])
+    } else if (yes) {
+      skillsToAdd.push(...available)
     } else {
       const { picked } = await prompts({
         type: 'multiselect',

@@ -7,8 +7,12 @@ import { fetchJSON } from '../github.js'
 import { listLocalSkillsets, readSkillset } from '../utils.js'
 import type { Skillset, GitHubFile } from '../types.js'
 
-export async function install([source, skillsetName]: string[]): Promise<void> {
+export async function install([source, skillsetName]: string[], { yes }: { yes: boolean } = { yes: false }): Promise<void> {
   if (!source) {
+    if (yes) {
+      console.error(kleur.red('Source required: npx @andbc/skillset install <path|owner/repo>'))
+      process.exit(1)
+    }
     const { input } = await prompts({
       type: 'text',
       name: 'input',
@@ -20,13 +24,13 @@ export async function install([source, skillsetName]: string[]): Promise<void> {
 
   const isLocal = source === '.' || source.startsWith('./') || source.startsWith('/') || fs.existsSync(source)
   if (isLocal) {
-    return installFromLocal(path.resolve(source), skillsetName)
+    return installFromLocal(path.resolve(source), skillsetName, yes)
   }
 
-  return installFromGitHub(source, skillsetName)
+  return installFromGitHub(source, skillsetName, yes)
 }
 
-async function installFromLocal(dir: string, skillsetName?: string): Promise<void> {
+async function installFromLocal(dir: string, skillsetName?: string, yes = false): Promise<void> {
   const skillsetsDir = path.join(dir, 'skillsets')
   if (!fs.existsSync(skillsetsDir)) {
     console.error(kleur.red(`No skillsets/ directory found at ${dir}`))
@@ -39,15 +43,15 @@ async function installFromLocal(dir: string, skillsetName?: string): Promise<voi
     process.exit(1)
   }
 
-  const toInstall = await pickSkillsets(skillsetFiles, skillsetName)
+  const toInstall = await pickSkillsets(skillsetFiles, skillsetName, yes)
 
   for (const name of toInstall) {
     const skillset = readSkillset(skillsetsDir, name)!
-    await runInstall(skillset)
+    await runInstall(skillset, yes)
   }
 }
 
-async function installFromGitHub(source: string, skillsetName?: string): Promise<void> {
+async function installFromGitHub(source: string, skillsetName?: string, yes = false): Promise<void> {
   const slug = source
     .replace(/^https?:\/\/github\.com\//, '')
     .replace(/\.git$/, '')
@@ -68,7 +72,7 @@ async function installFromGitHub(source: string, skillsetName?: string): Promise
     process.exit(1)
   }
 
-  const toInstall = await pickSkillsets(skillsetFiles, skillsetName)
+  const toInstall = await pickSkillsets(skillsetFiles, skillsetName, yes)
 
   for (const name of toInstall) {
     const url = `https://raw.githubusercontent.com/${owner}/${repo}/main/skillsets/${name}.json`
@@ -81,11 +85,11 @@ async function installFromGitHub(source: string, skillsetName?: string): Promise
       console.error(kleur.red(`Could not fetch skillset "${name}"`))
       process.exit(1)
     }
-    await runInstall(skillset)
+    await runInstall(skillset, yes)
   }
 }
 
-async function pickSkillsets(available: string[], specified?: string): Promise<string[]> {
+async function pickSkillsets(available: string[], specified?: string, yes = false): Promise<string[]> {
   if (specified) {
     if (!available.includes(specified)) {
       console.error(kleur.red(`Skillset "${specified}" not found. Available: ${available.join(', ')}`))
@@ -94,6 +98,7 @@ async function pickSkillsets(available: string[], specified?: string): Promise<s
     return [specified]
   }
   if (available.length === 1) return available
+  if (yes) return available
 
   const { picked } = await prompts({
     type: 'multiselect',
@@ -105,21 +110,22 @@ async function pickSkillsets(available: string[], specified?: string): Promise<s
   return picked as string[]
 }
 
-async function runInstall(skillset: Skillset): Promise<void> {
+async function runInstall(skillset: Skillset, yes = false): Promise<void> {
   console.log(`\n${kleur.bold(skillset.name)}  ${kleur.dim(skillset.description ?? '')}`)
   console.log(kleur.dim(`${skillset.skills.length} skill(s):\n`))
   for (const s of skillset.skills) {
     console.log(`  ${kleur.dim('·')} ${s.skill}  ${kleur.dim(s.repo)}`)
   }
 
-  const { confirm } = await prompts({
-    type: 'confirm',
-    name: 'confirm',
-    message: `Install these ${skillset.skills.length} skill(s)?`,
-    initial: true
-  }, { onCancel: () => process.exit(0) })
-
-  if (!confirm) return
+  if (!yes) {
+    const { confirm } = await prompts({
+      type: 'confirm',
+      name: 'confirm',
+      message: `Install these ${skillset.skills.length} skill(s)?`,
+      initial: true
+    }, { onCancel: () => process.exit(0) })
+    if (!confirm) return
+  }
 
   for (const s of skillset.skills) {
     console.log(kleur.dim(`  Installing ${s.skill}...`))

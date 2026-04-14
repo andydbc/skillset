@@ -4,7 +4,7 @@ import fs from 'fs'
 import path from 'path'
 import { findSkillsetsDir, writeSkillset } from '../utils.js'
 
-export async function create(): Promise<void> {
+export async function create(_args: string[], { yes }: { yes: boolean } = { yes: false }): Promise<void> {
   let skillsetsDir = findSkillsetsDir()
   if (!skillsetsDir) {
     skillsetsDir = path.join(process.cwd(), 'skillsets')
@@ -13,6 +13,11 @@ export async function create(): Promise<void> {
   }
 
   console.log(kleur.bold('\nCreate a new skillset\n'))
+
+  if (yes) {
+    console.error(kleur.red('create requires interactive input — run without --yes'))
+    process.exit(1)
+  }
 
   const { name, description } = await prompts([
     {

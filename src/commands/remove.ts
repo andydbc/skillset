@@ -3,7 +3,7 @@ import kleur from 'kleur'
 import { execSync } from 'child_process'
 import { findSkillsetsDir, listLocalSkillsets, readSkillset, writeSkillset } from '../utils.js'
 
-export async function remove([skillsetArg, skillArg]: string[]): Promise<void> {
+export async function remove([skillsetArg, skillArg]: string[], { yes }: { yes: boolean } = { yes: false }): Promise<void> {
   const skillsetsDir = findSkillsetsDir()
   if (!skillsetsDir) {
     console.error(kleur.red('No skillsets/ directory found.'))
@@ -22,6 +22,9 @@ export async function remove([skillsetArg, skillArg]: string[]): Promise<void> {
     targetSkillset = skillsetArg
   } else if (skillsets.length === 1) {
     targetSkillset = skillsets[0]
+  } else if (yes) {
+    console.error(kleur.red('Multiple skillsets found — specify one: npx @andbc/skillset remove <skillset> <skill>'))
+    process.exit(1)
   } else {
     const { picked } = await prompts({
       type: 'select',
@@ -46,6 +49,9 @@ export async function remove([skillsetArg, skillArg]: string[]): Promise<void> {
       process.exit(1)
     }
     toRemove = [skillArg]
+  } else if (yes) {
+    console.error(kleur.red('Skill name required: npx @andbc/skillset remove <skillset> <skill>'))
+    process.exit(1)
   } else {
     const { picked } = await prompts({
       type: 'multiselect',
