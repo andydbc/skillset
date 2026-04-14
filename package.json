@@ -26,6 +26,10 @@
     "tsup": "^8.5.1",
     "typescript": "^6.0.2"
   },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/andydbc/skillset.git"
+  },
   "engines": {
     "node": ">=18"
   }
