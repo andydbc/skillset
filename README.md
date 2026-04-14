@@ -5,7 +5,7 @@ Manage skillsets for Claude Code — group skills from [skills.sh](https://skill
 ## Usage
 
 ```bash
-npx skillset <command>
+npx @andbc/skillset <command>
 ```
 
 ## Commands
@@ -24,14 +24,14 @@ npx skillset <command>
 
 ```bash
 mkdir my-skillsets && cd my-skillsets
-npx skillset create
+npx @andbc/skillset create
 ```
 
 **2. Add skills**
 
 ```bash
-npx skillset add https://skills.sh/user/repo/skill-name
-npx skillset add https://github.com/user/repo
+npx @andbc/skillset add https://skills.sh/user/repo/skill-name
+npx @andbc/skillset add https://github.com/user/repo
 ```
 
 Skills are stored as references in `skillsets/<name>.json` — no files are copied.
@@ -39,13 +39,13 @@ Skills are stored as references in `skillsets/<name>.json` — no files are copi
 **3. Push to GitHub, then install anywhere**
 
 ```bash
-npx skillset install user/my-skillsets
+npx @andbc/skillset install user/my-skillsets
 ```
 
 Or install from a local path:
 
 ```bash
-npx skillset install .
+npx @andbc/skillset install .
 ```
 
 ## Skillset format
