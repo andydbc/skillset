@@ -7,9 +7,9 @@ import { findSkillsetsDir, writeSkillset } from '../utils.js'
 export async function create(_args: string[], { yes }: { yes: boolean } = { yes: false }): Promise<void> {
   let skillsetsDir = findSkillsetsDir()
   if (!skillsetsDir) {
-    skillsetsDir = path.join(process.cwd(), 'skillsets')
+    skillsetsDir = path.join(process.cwd(), '.skillsets')
     fs.mkdirSync(skillsetsDir)
-    console.log(kleur.dim('Created skillsets/\n'))
+    console.log(kleur.dim('Created .skillsets/\n'))
   }
 
   console.log(kleur.bold('\nCreate a new skillset\n'))
@@ -40,8 +40,8 @@ export async function create(_args: string[], { yes }: { yes: boolean } = { yes:
     process.exit(1)
   }
 
-  writeSkillset(skillsetsDir, { name, description, skills: [] })
+  writeSkillset(skillsetsDir, { $skillset: true, name, description, dependencies: [] })
 
-  console.log(kleur.green(`\n✓ Created skillsets/${name}.json`))
+  console.log(kleur.green(`\n✓ Created .skillsets/${name}.json`))
   console.log(kleur.dim('\nNext: npx skillset add <skill-url>'))
 }

@@ -1,13 +1,23 @@
 export interface SkillRef {
+  type?: 'skill'
   skill: string
   repo: string
   source: string
 }
 
+export interface PluginRef {
+  type: 'plugin'
+  name: string
+  marketplace: string
+}
+
+export type SkillsetEntry = SkillRef | PluginRef
+
 export interface Skillset {
+  $skillset: true
   name: string
   description?: string
-  skills: SkillRef[]
+  dependencies: SkillsetEntry[]
 }
 
 export interface GitHubFile {

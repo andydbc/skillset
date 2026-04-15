@@ -2,24 +2,15 @@ import prompts from 'prompts'
 import kleur from 'kleur'
 import fs from 'fs'
 import path from 'path'
+import os from 'os'
 import { execSync } from 'child_process'
-import { fetchJSON } from '../github.js'
+import { fetchJSON, fetchRaw } from '../github.js'
 import { listLocalSkillsets, readSkillset } from '../utils.js'
-import type { Skillset, GitHubFile } from '../types.js'
+import type { Skillset, GitHubFile, PluginRef, SkillRef } from '../types.js'
 
 export async function install([source, skillsetName]: string[], { yes }: { yes: boolean } = { yes: false }): Promise<void> {
   if (!source) {
-    if (yes) {
-      console.error(kleur.red('Source required: npx @andbc/skillset install <path|owner/repo>'))
-      process.exit(1)
-    }
-    const { input } = await prompts({
-      type: 'text',
-      name: 'input',
-      message: 'Source',
-      hint: 'local path, . for current dir, or user/repo'
-    }, { onCancel: () => process.exit(0) })
-    source = input as string
+    source = '.'
   }
 
   const isLocal = source === '.' || source.startsWith('./') || source.startsWith('/') || fs.existsSync(source)
@@ -31,20 +22,19 @@ export async function install([source, skillsetName]: string[], { yes }: { yes: 
 }
 
 async function installFromLocal(dir: string, skillsetName?: string, yes = false): Promise<void> {
-  // Try root first, then fall back to skillsets/ subfolder
-  let skillsetsDir = dir
-  let skillsetFiles = listLocalSkillsets(dir)
-  if (skillsetFiles.length === 0) {
-    skillsetsDir = path.join(dir, 'skillsets')
-    if (!fs.existsSync(skillsetsDir)) {
-      console.error(kleur.red(`No skillsets found at ${dir} or ${skillsetsDir}`))
-      process.exit(1)
-    }
+  // Try skillsets/ subfolder first, then fall back to root
+  let skillsetsDir = path.join(dir, '.skillsets')
+  let skillsetFiles: string[] = []
+  if (fs.existsSync(skillsetsDir)) {
     skillsetFiles = listLocalSkillsets(skillsetsDir)
+  }
+  if (skillsetFiles.length === 0) {
+    skillsetsDir = dir
+    skillsetFiles = listLocalSkillsets(dir)
   }
 
   if (skillsetFiles.length === 0) {
-    console.error(kleur.red(`No skillsets found in ${skillsetsDir}`))
+    console.error(kleur.red(`No skillsets found at ${path.join(dir, '.skillsets')} or ${dir}`))
     process.exit(1)
   }
 
@@ -66,25 +56,29 @@ async function installFromGitHub(source: string, skillsetName?: string, yes = fa
 
   console.log(kleur.dim(`\nFetching skillsets from ${slug}...`))
 
-  // Try root first, then fall back to skillsets/ subfolder
+  // Try skillsets/ subfolder first, then fall back to root
   let skillsetFiles: string[] = []
-  let skillsetsPath = ''
+  let skillsetsPath = '.skillsets'
   try {
     const contents = await fetchJSON<GitHubFile[]>(
-      `https://api.github.com/repos/${owner}/${repo}/contents`
+      `https://api.github.com/repos/${owner}/${repo}/contents/.skillsets`
     )
     skillsetFiles = (contents as GitHubFile[]).filter(f => f.type === 'file' && f.name.endsWith('.json')).map(f => f.name.replace('.json', ''))
-  } catch { /* ignore, try subfolder */ }
+  } catch { /* ignore, try root */ }
 
   if (skillsetFiles.length === 0) {
+    skillsetsPath = ''
     try {
       const contents = await fetchJSON<GitHubFile[]>(
-        `https://api.github.com/repos/${owner}/${repo}/contents/skillsets`
+        `https://api.github.com/repos/${owner}/${repo}/contents`
       )
-      skillsetFiles = (contents as GitHubFile[]).filter(f => f.name.endsWith('.json')).map(f => f.name.replace('.json', ''))
-      skillsetsPath = 'skillsets'
+      skillsetFiles = (contents as GitHubFile[]).filter(f => f.type === 'file' && f.name.endsWith('.json')).map(f => f.name.replace('.json', ''))
     } catch {
-      console.error(kleur.red(`Could not fetch skillsets from ${slug}. Make sure the repo has .json skillset files at the root or in a skillsets/ directory.`))
+      console.error(kleur.red(`Could not fetch skillsets from ${slug}. Make sure the repo has .json skillset files in a .skillsets/ directory or at the root.`))
+      process.exit(1)
+    }
+    if (skillsetFiles.length === 0) {
+      console.error(kleur.red(`No skillset JSON files found in ${slug}.`))
       process.exit(1)
     }
   }
@@ -104,6 +98,28 @@ async function installFromGitHub(source: string, skillsetName?: string, yes = fa
       process.exit(1)
     }
     await runInstall(skillset, yes)
+  }
+}
+
+function resolveSkillsDir(scope: 'project' | 'user'): string {
+  if (scope === 'user') return path.join(os.homedir(), '.claude', 'skills')
+  return path.join(process.cwd(), '.claude', 'skills')
+}
+
+async function installSkillFiles(s: SkillRef, scope: 'project' | 'user' = 'project'): Promise<void> {
+  const [owner, repo] = s.repo.split('/')
+  const contents = await fetchJSON<GitHubFile[]>(
+    `https://api.github.com/repos/${owner}/${repo}/contents/skills/${s.skill}`
+  )
+  if (!Array.isArray(contents)) throw new Error(`Unexpected response for skill "${s.skill}"`)
+
+  const skillDir = path.join(resolveSkillsDir(scope), s.skill)
+  fs.mkdirSync(skillDir, { recursive: true })
+
+  for (const file of contents) {
+    if (file.type !== 'file') continue
+    const content = await fetchRaw(file.download_url)
+    fs.writeFileSync(path.join(skillDir, file.name), content)
   }
 }
 
@@ -129,26 +145,51 @@ async function pickSkillsets(available: string[], specified?: string, yes = fals
 }
 
 async function runInstall(skillset: Skillset, yes = false): Promise<void> {
+  const plugins = skillset.dependencies.filter((s): s is PluginRef => s.type === 'plugin')
+  const skills = skillset.dependencies.filter((s): s is SkillRef => s.type !== 'plugin') as SkillRef[]
+
   console.log(`\n${kleur.bold(skillset.name)}  ${kleur.dim(skillset.description ?? '')}`)
-  console.log(kleur.dim(`${skillset.skills.length} skill(s):\n`))
-  for (const s of skillset.skills) {
-    console.log(`  ${kleur.dim('·')} ${s.skill}  ${kleur.dim(s.repo)}`)
+  if (plugins.length > 0) {
+    console.log(kleur.dim(`\n  Plugins (${plugins.length}):`))
+    for (const p of plugins) console.log(`  ${kleur.dim('·')} ${p.name}  ${kleur.dim('@' + p.marketplace)}`)
+  }
+  if (skills.length > 0) {
+    console.log(kleur.dim(`\n  Skills (${skills.length}):`))
+    for (const s of skills) console.log(`  ${kleur.dim('·')} ${s.skill}  ${kleur.dim(s.repo)}`)
   }
 
   if (!yes) {
     const { confirm } = await prompts({
       type: 'confirm',
       name: 'confirm',
-      message: `Install these ${skillset.skills.length} skill(s)?`,
+      message: `Install ${skillset.dependencies.length} item(s)?`,
       initial: true
     }, { onCancel: () => process.exit(0) })
     if (!confirm) return
   }
 
-  for (const s of skillset.skills) {
+  for (const p of plugins) {
+    console.log(kleur.dim(`  Installing plugin ${p.name}...`))
+    try {
+      // Uninstall first for a clean install (ignore errors if not installed)
+      try { execSync(`claude plugin uninstall ${p.name}`, { stdio: 'pipe', input: '\n' }) } catch { /* not installed yet */ }
+      const marketplaceFlag = p.marketplace === 'claude-plugins-official' ? '' : ` --marketplace ${p.marketplace}`
+      execSync(`claude plugin install ${p.name}${marketplaceFlag} --scope project`, { stdio: 'pipe', input: '\n' })
+      console.log(kleur.green(`  ✓ plugin ${p.name}`))
+    } catch (err) {
+      const msg = (err as any).stderr?.toString() ?? (err as Error).message
+      if (msg.includes('marketplace') || msg.includes('not found')) {
+        console.error(kleur.red(`  ✗ plugin ${p.name}: marketplace "${p.marketplace}" not found. Add it first: claude plugin marketplace add ${p.marketplace}`))
+      } else {
+        console.error(kleur.red(`  ✗ plugin ${p.name}: ${msg}`))
+      }
+    }
+  }
+
+  for (const s of skills) {
     console.log(kleur.dim(`  Installing ${s.skill}...`))
     try {
-      execSync(`npx skills add ${s.repo} --skill ${s.skill} -y`, { stdio: 'pipe' })
+      await installSkillFiles(s)
       console.log(kleur.green(`  ✓ ${s.skill}`))
     } catch (err) {
       console.error(kleur.red(`  ✗ ${s.skill}: ${(err as Error).message}`))

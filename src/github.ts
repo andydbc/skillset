@@ -50,6 +50,26 @@ export function parseGitHubUrl(url: string): ParsedGitHubUrl | null {
   }
 }
 
+export interface PluginMetadata {
+  name?: string
+  description?: string
+  version?: string
+  author?: { name?: string; email?: string } | string
+}
+
+// Fetch .claude-plugin/plugin.json metadata if present
+export async function fetchPluginMetadata(owner: string, repo: string): Promise<PluginMetadata | null> {
+  try {
+    const file = await fetchJSON<GitHubFile>(
+      `https://api.github.com/repos/${owner}/${repo}/contents/.claude-plugin/plugin.json`
+    )
+    const raw = Buffer.from((file as any).content, 'base64').toString('utf8')
+    return JSON.parse(raw) as PluginMetadata
+  } catch {
+    return null
+  }
+}
+
 // List skill names in a GitHub repo (skills/<name>/SKILL.md)
 export async function listSkillsInRepo(owner: string, repo: string): Promise<string[]> {
   try {

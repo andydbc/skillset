@@ -66,8 +66,12 @@ function printLocal(skillsetsDir: string): void {
 
 function printSkillset(skillset: Skillset): void {
   console.log(`${kleur.bold().cyan(skillset.name)}  ${kleur.dim(skillset.description ?? '')}`)
-  for (const s of skillset.skills) {
-    console.log(`  ${kleur.dim('·')} ${s.skill}  ${kleur.dim(s.repo)}`)
+  for (const s of skillset.dependencies) {
+    if (s.type === 'plugin') {
+      console.log(`  ${kleur.dim('·')} ${s.name}  ${kleur.dim('@' + s.marketplace)}`)
+    } else {
+      console.log(`  ${kleur.dim('·')} ${s.skill}  ${kleur.dim(s.repo)}`)
+    }
   }
   console.log()
 }

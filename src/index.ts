@@ -18,7 +18,7 @@ if (!command || command === '--help' || command === '-h') {
 ${kleur.bold('skillset')} — manage skillsets for Claude Code
 
 ${kleur.bold('Commands:')}
-  ${kleur.cyan('create')}                       create a new skillset
+  ${kleur.cyan('create')}                    create a new skillset
   ${kleur.cyan('add')} ${kleur.dim('<url>')}                 add a skill reference to a skillset
   ${kleur.cyan('remove')} ${kleur.dim('[skillset] [skill]')} remove a skill from a skillset
   ${kleur.cyan('list')} ${kleur.dim('[owner/repo]')}         list skillsets (local or from GitHub)
@@ -29,6 +29,7 @@ ${kleur.bold('Flags:')}
 
 ${kleur.bold('Examples:')}
   ${kleur.dim('npx @andbc/skillset create')}
+  ${kleur.dim('npx @andbc/skillset add plugin@marketplace')}
   ${kleur.dim('npx @andbc/skillset add https://skills.sh/user/repo/skill-name')}
   ${kleur.dim('npx @andbc/skillset add https://github.com/user/repo')}
   ${kleur.dim('npx @andbc/skillset list user/my-skillsets')}
