@@ -31,13 +31,18 @@ export async function install([source, skillsetName]: string[], { yes }: { yes: 
 }
 
 async function installFromLocal(dir: string, skillsetName?: string, yes = false): Promise<void> {
-  const skillsetsDir = path.join(dir, 'skillsets')
-  if (!fs.existsSync(skillsetsDir)) {
-    console.error(kleur.red(`No skillsets/ directory found at ${dir}`))
-    process.exit(1)
+  // Try root first, then fall back to skillsets/ subfolder
+  let skillsetsDir = dir
+  let skillsetFiles = listLocalSkillsets(dir)
+  if (skillsetFiles.length === 0) {
+    skillsetsDir = path.join(dir, 'skillsets')
+    if (!fs.existsSync(skillsetsDir)) {
+      console.error(kleur.red(`No skillsets found at ${dir} or ${skillsetsDir}`))
+      process.exit(1)
+    }
+    skillsetFiles = listLocalSkillsets(skillsetsDir)
   }
 
-  const skillsetFiles = listLocalSkillsets(skillsetsDir)
   if (skillsetFiles.length === 0) {
     console.error(kleur.red(`No skillsets found in ${skillsetsDir}`))
     process.exit(1)
@@ -61,21 +66,34 @@ async function installFromGitHub(source: string, skillsetName?: string, yes = fa
 
   console.log(kleur.dim(`\nFetching skillsets from ${slug}...`))
 
-  let skillsetFiles: string[]
+  // Try root first, then fall back to skillsets/ subfolder
+  let skillsetFiles: string[] = []
+  let skillsetsPath = ''
   try {
     const contents = await fetchJSON<GitHubFile[]>(
-      `https://api.github.com/repos/${owner}/${repo}/contents/skillsets`
+      `https://api.github.com/repos/${owner}/${repo}/contents`
     )
-    skillsetFiles = contents.filter(f => f.name.endsWith('.json')).map(f => f.name.replace('.json', ''))
-  } catch {
-    console.error(kleur.red(`Could not fetch skillsets from ${slug}. Make sure the repo has a skillsets/ directory.`))
-    process.exit(1)
+    skillsetFiles = (contents as GitHubFile[]).filter(f => f.type === 'file' && f.name.endsWith('.json')).map(f => f.name.replace('.json', ''))
+  } catch { /* ignore, try subfolder */ }
+
+  if (skillsetFiles.length === 0) {
+    try {
+      const contents = await fetchJSON<GitHubFile[]>(
+        `https://api.github.com/repos/${owner}/${repo}/contents/skillsets`
+      )
+      skillsetFiles = (contents as GitHubFile[]).filter(f => f.name.endsWith('.json')).map(f => f.name.replace('.json', ''))
+      skillsetsPath = 'skillsets'
+    } catch {
+      console.error(kleur.red(`Could not fetch skillsets from ${slug}. Make sure the repo has .json skillset files at the root or in a skillsets/ directory.`))
+      process.exit(1)
+    }
   }
 
   const toInstall = await pickSkillsets(skillsetFiles, skillsetName, yes)
 
   for (const name of toInstall) {
-    const url = `https://raw.githubusercontent.com/${owner}/${repo}/main/skillsets/${name}.json`
+    const filePath = skillsetsPath ? `${skillsetsPath}/${name}.json` : `${name}.json`
+    const url = `https://raw.githubusercontent.com/${owner}/${repo}/main/${filePath}`
     let skillset: Skillset
     try {
       const res = await fetch(url)
