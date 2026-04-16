@@ -8,10 +8,16 @@ Manage skills and plugins for Claude. Group skills from [skills.sh](https://skil
 
 - [Claude CLI](https://claude.ai/download) must be installed
 
+## Installation
+
+```bash
+npm install -g @andbc/skillset
+```
+
 ## Usage
 
 ```bash
-npx @andbc/skillset <command>
+skillset <command>
 ```
 
 ## Commands
@@ -30,18 +36,18 @@ npx @andbc/skillset <command>
 
 ```bash
 mkdir my-skillsets && cd my-skillsets
-npx @andbc/skillset create
+skillset create
 ```
 
 **2. Add skills and plugins**
 
 ```bash
 # skills.sh or GitHub skill
-npx @andbc/skillset add https://skills.sh/user/repo/skill-name
-npx @andbc/skillset add https://github.com/user/repo
+skillset add https://skills.sh/user/repo/skill-name
+skillset add https://github.com/user/repo
 
 # Claude Code plugin (marketplace must be configured first)
-npx @andbc/skillset add plugin-name@marketplace-name
+skillset add plugin-name@marketplace-name
 ```
 
 References are stored in `.skillsets/<name>.json` — no files are copied.
@@ -49,13 +55,13 @@ References are stored in `.skillsets/<name>.json` — no files are copied.
 **3. Push to GitHub, then install anywhere**
 
 ```bash
-npx @andbc/skillset install user/my-skillsets
+skillset install user/my-skillsets
 ```
 
 Or install from a local path:
 
 ```bash
-npx @andbc/skillset install .
+skillset install .
 ```
 
 Skills are always installed at **project scope** — into the current working directory's `.claude/` folder.
