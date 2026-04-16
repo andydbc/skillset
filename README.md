@@ -1,5 +1,7 @@
 # skillset
 
+![banner](./media/banner.png)
+
 Manage skills and plugins for Claude. Group skills from [skills.sh](https://skills.sh) or GitHub into named collections and install them with a single command.
 
 ## Requirements
