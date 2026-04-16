@@ -66,6 +66,14 @@ skillset install .
 
 Skills are always installed at **project scope** — into the current working directory's `.claude/` folder.
 
+## Example
+
+Install skills from [andydbc/skillsets](https://github.com/andydbc/skillsets):
+
+```bash
+skillset install andydbc/skillsets
+```
+
 ## Skillset format
 
 Each skillset is a JSON file in the `.skillsets/` directory:
